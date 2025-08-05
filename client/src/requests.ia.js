@@ -1,38 +1,78 @@
-/**
- * Makes a call to the api that is meant to obtain IA generated maps
- */
-export async function requestIAAPI() {
-    const response = await fetch("http://localhost:8000/ia/testReturnImage", {
-        method: "GET",
-    });
-    console.log(response)
-    console.log(response.body)
-    return await response.json();
-}
+const iaEndpoint = "http://measurements.espaciosoa.com:8000"
 
-export async function requestIATraining(roomName) {
-    const response = await fetch(`http://localhost:8000/ia/runTraining/${roomName}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            signalParameter: "dbm",
-            epochs: 10,
-        }),
-    });
-    console.log(response)
-    console.log(response.body)
+
+
+const globalTrainingEndpoint = "/ia_estimator/runGlobalTraining"
+
+
+//ESTOY PROBANDO LOS ENDPOINTS DE FER
+//1. Supuestamente ejecuta el training global
+export async function requestIAGlobalTraining() {
+    const response = await fetch(
+        // `${iaEndpoint}${globalTrainingEndpoint}`
+        "http://measurements.espaciosoa.com:8000/ia_estimator/runGlobalTraining"
+
+        , {
+
+            method: "POST",
+        });
+    console.log("GLOBAL TRAINING ENDPOINT", response)
+
     const responseContent = await response.json();
-
-
-    return responseContent.data
-
+    console.log("RESPONSE CONTENT REQUEST IA GLOBAL", responseContent)
+    return responseContent
 }
 
 
-export async function requestTrainingJobStatus(jobId) {
-    const response = await fetch(`http://localhost:8000/ia/jobStatus/${jobId}`, {
+//2. Entiendo que esto me devuelve puntos estimados??? NO PARECE
+export async function requestIAIndividualTraining(jobId, roomName) {
+
+    const body = JSON.stringify({
+        job_id: jobId,
+        room_name: roomName
+    })
+
+    const response = await fetch(
+        "http://measurements.espaciosoa.com:8000/ia_estimator/runIndividualTraining"
+        , {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: body,
+        });
+    console.log("IA INDIVIDUAL", response)
+
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT REQUEST IA INDIVIDUAL", responseContent)
+
+    return responseContent
+}
+
+
+//3. esto si que me da los puntos estimados
+export async function requestEstimatedMapData(roomName) {
+
+    const response = await fetch(
+        `http://measurements.espaciosoa.com:8000/ia_estimator/mapa/extraer/${roomName}`
+        , {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+    console.log("GETTING ESTIMATED DATA FOR ROOM", response)
+
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT FOR MAP REQUEST", responseContent)
+
+    return responseContent
+}
+
+
+
+export async function requestIAJobStatus(jobId) {
+    const response = await fetch(`http://measurements.espaciosoa.com:8000/ia_estimator/jobStatus/${jobId}`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -41,23 +81,43 @@ export async function requestTrainingJobStatus(jobId) {
     console.log(response)
     console.log(response.body)
     const responseContent = await response.json();
+    console.log("RESPONSE CONTENT FOR JOB STATUS", responseContent)
 
 
-    return responseContent.data
+    return responseContent
 
 }
 
 
 
-
-export async function requestIAAPIReal(roomName) {
-    const response = await fetch(`http://localhost:8000/ia/inference/${roomName}`, {
+export async function requestIAServerAlive() {
+    const response = await fetch(`http://measurements.espaciosoa.com:8000/ia_estimator`, {
         method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+        }
     });
     console.log(response)
     console.log(response.body)
-    return await response.json();
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT FOR JOB STATUS", responseContent)
+
+
+    return responseContent
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

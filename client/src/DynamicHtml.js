@@ -3,7 +3,13 @@ import JSUtils from "./Helpers.js";
 import { getNaturalLanguageDate } from "/src/converters.js";
 import { putSession, deleteSession, deleteMeasurement } from "./requests.js";
 import { validateLat, validateLong } from "./geo.utils.js";
-
+import { SwitchComponent } from "./components/switch.component.js";
+import { initPopup } from "./popup.js";
+import { AIICon } from "./icons/AIIcon.js";
+import { renderMeasurementsForSession } from "./visualization.render.js"
+import {
+    getPropertyColorForValue
+} from "../dist/typed-functions.js"
 function isObject(item) {
     return (item && typeof item === "object" && !Array.isArray(item));
 }
@@ -67,17 +73,21 @@ export function showStateInformationSection(state) {
 
     //Showing in the page for which session I am showing info
     const myDivTemplate = `<section class="currently-displaying"> 
-        <header>
-            <h2> Room: 
+        <header class="state-sect-header" >
+            <template data-toReplace="icon"></template>
+            <h2 class="room-header-text"> Room: 
                 <span class="room-name">{{roomName}}</span>
                 <span class="room-id">{{roomId}}</span>
             </h2>
-            <h3> Session/s: </h3>
+        </header> 
+        <div class="flex-col">
+            <h3 class="sessions-summary-title"> Session/s ({{numSessions}}):  </h3>
                 <div class="sessions-displayed-list"> 
                     <!-- Dynamic filling (list of sessions being displayed)-->
-                <div class="sessions-displayed-list"> 
-        </header> 
-         <p> total measurements: {{measurements}} </p>  
+                </div > 
+                   <p> Total measurements: {{measurements}} </p>  
+        </div>
+      
       </section>`
 
 
@@ -95,8 +105,10 @@ export function showStateInformationSection(state) {
 
 
     const myStateSummary = JSUtils.replaceTemplatePlaceholders(myDivTemplate, {
+
         roomName: `${state.activeRoom.name}`,
         roomId: `${state.activeRoom._id}`,
+        numSessions: `${state.activeSessions.length}`,
         measurements: state.activeMeasurements.length
     })
 
@@ -107,6 +119,11 @@ export function showStateInformationSection(state) {
 
     const myStateSummaryAlmostFilled = JSUtils.txtToHTMLNode(myStateSummary)
     const sessionsContainer = myStateSummaryAlmostFilled.querySelector(".sessions-displayed-list")
+
+
+    //Add icon for this section
+    const iconPlaceholder = myStateSummaryAlmostFilled.querySelector('[data-toReplace="icon"]')
+    iconPlaceholder.replaceWith(PinIcon({ fill: "#ffffff", size: "2em", cssClasses: ["rotated"] }))
 
     sessionsContainer.replaceChildren(...allSessionSpansNodes)
     measurementsContainer.replaceChildren(myStateSummaryAlmostFilled)
@@ -667,4 +684,167 @@ export function showSessionsAsTables(parent, sessions, refetchLogic) {
 
             }
         ));
+}
+
+
+
+import { requestIAGlobalTraining, requestIAIndividualTraining, requestIAJobStatus, requestEstimatedMapData } from "./requests.ia.js"
+import { PinIcon } from "./icons/PinIcon.js";
+let trainingStatus = null;
+let resultIndividual = null;
+
+
+let jobStatusPollingId = null
+let jobId = null
+let jobStatus = null
+
+
+import { map, visualizationCenter } from "../client.index.js"
+import {
+    localToGeo
+}
+    from "./geo.utils.js"
+
+
+export function showIAButtons(parentElem, activeRoom) {
+
+
+    const sectionIAButtonsTemplateHTML = `
+        <div class="ia-section flex-row align-center" >
+            <header class="flex-col">
+            <template data-toReplace="icon"></template>
+               <h3> Artificial Intelligence </h3>
+            </header>
+            <!-- The actions next --->
+                {{actions}}
+         </div>
+    `
+
+
+    const buttonTemplateHTML = `
+    <button 
+        class="hover-scaling button"
+        onClick={{handleClick}}>
+               {{label}}
+                </button>`
+
+
+
+    const { showPopupForT, showPopupWhile } = initPopup()
+
+
+    //Crear dataset de todas las salas
+    const nodeButtonRunTraining = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(buttonTemplateHTML, {
+        handleClick: async () => {
+
+            //First ask for global training
+            trainingStatus = await requestIAGlobalTraining()
+
+            console.log("training status",)
+            if (trainingStatus?.success) {
+
+                showPopupForT(`${trainingStatus.message}`, "ok", 2, () => {
+                    //repeatedly ask for the job status
+                    jobStatusPollingId = setTimeout(async () => {
+
+                        jobStatus = await requestIAJobStatus(trainingStatus.job_id)
+                        console.log(jobStatusPollingId)
+                        console.log("JOB STATUS", jobStatus)
+                    })
+
+                })
+                    , 2000
+            }
+        }
+
+        ,
+        label: "Init global training"
+    })
+
+
+    //Botón de entrenar solo para una sala
+    const nodeButtonRunTrainingIndividual = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(buttonTemplateHTML, {
+        handleClick: async () => {
+
+            resultIndividual = await requestIAIndividualTraining(trainingStatus?.job_id, activeRoom.name)
+            showPopupForT(`${resultIndividual.message}`, "ok", 2)
+        }
+        ,
+        label: `Run training for '${activeRoom.name}' `
+    })
+
+
+
+    //Slider de mostrar mediciones estimadas
+    const showIAMeasurementsToggleSwitch = SwitchComponent("Mostrar estimaciones IA",
+        false, async (ev) => {
+            const isOn = ev.target.checked
+            const estimations = showPopupWhile("Cargando estimaciones generadas por IA", "load", async () => requestEstimatedMapData(activeRoom.name))
+
+            console.log(`IA estimations for this room `, estimations)
+
+
+
+            const iaMeasurementsLayerGroup = L.layerGroup().addTo(map); // Layer to store measurements in a group
+
+
+            (await estimations).map((est) => {
+                //FIXME Adjust to fit bounding box maybe??
+                const localRoomCoordsAsLatLong = localToGeo(est.x, est.z, visualizationCenter.lat, visualizationCenter.lon)
+                let measurementPointInMap = L.circle(localRoomCoordsAsLatLong, {
+                    className: 'animated-marker',
+                    color: getPropertyColorForValue("dbm", est["dbm"]),
+                    fillOpacity: 0.1,
+                    radius: 0.05
+                })
+                .bindTooltip(`IA estimated point ${est["dbm"]} `)
+                .addTo(iaMeasurementsLayerGroup);
+
+            })
+
+
+        },
+        //Custom styles
+        {
+            labelStyle: ["white"]
+        }
+
+
+    )
+
+
+    //These are all the action buttons
+    const allButtons = [nodeButtonRunTraining, nodeButtonRunTrainingIndividual, showIAMeasurementsToggleSwitch]
+
+
+
+    const actionsContainer = document.createElement("div");
+    actionsContainer.className = ["flex-row", "align-center", "wrap"].join(" ")
+    allButtons.forEach((btn) => { actionsContainer.appendChild(btn) })
+
+
+    const IASectionDiv = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(sectionIAButtonsTemplateHTML, {
+        actions: actionsContainer
+    })
+
+    const iconPlaceholder = IASectionDiv.querySelector('[data-toReplace="icon"]')
+
+    console.log(AIICon({ fill: "#ffffff", size: "1em" }))
+    iconPlaceholder.replaceWith(
+        AIICon({ fill: "#ffffff", size: "4em" })
+    )
+
+
+
+
+
+    parentElem.replaceChildren(
+        IASectionDiv
+    )
+
+
+
+
+
+
 }
