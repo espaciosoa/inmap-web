@@ -1,19 +1,31 @@
-const iaEndpoint = "http://measurements.espaciosoa.com:8000"
+// const iaEndpoint = "http://measurements.espaciosoa.com:8000"
+const iaEndpoint = "https://ia.measurements.espaciosoa.com"
 
 
 
-const globalTrainingEndpoint = "/ia_estimator/runGlobalTraining"
+
+// Ver si el servidor está activo
+export async function requestIAServerAlive() {
+    const response = await fetch(`${iaEndpoint}/ia_estimator`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+        }
+    });
+
+    const responseContent = await response.json();
+
+    // console.log("Server status", responseContent)
+    return responseContent
+
+}
 
 
-//ESTOY PROBANDO LOS ENDPOINTS DE FER
-//1. Supuestamente ejecuta el training global
+//1. Entrenamiento global
 export async function requestIAGlobalTraining() {
     const response = await fetch(
-        // `${iaEndpoint}${globalTrainingEndpoint}`
-        "http://measurements.espaciosoa.com:8000/ia_estimator/runGlobalTraining"
-
-        , {
-
+        `${iaEndpoint}/ia_estimator/runGlobalTraining`,
+        {
             method: "POST",
         });
     console.log("GLOBAL TRAINING ENDPOINT", response)
@@ -24,7 +36,7 @@ export async function requestIAGlobalTraining() {
 }
 
 
-//2. Entiendo que esto me devuelve puntos estimados??? NO PARECE
+//2. Esto genera el dataset para una room concreta
 export async function requestIAIndividualTraining(jobId, roomName) {
 
     const body = JSON.stringify({
@@ -33,8 +45,8 @@ export async function requestIAIndividualTraining(jobId, roomName) {
     })
 
     const response = await fetch(
-        "http://measurements.espaciosoa.com:8000/ia_estimator/runIndividualTraining"
-        , {
+        `${iaEndpoint}/ia_estimator/runIndividualTraining`,
+        {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -50,16 +62,21 @@ export async function requestIAIndividualTraining(jobId, roomName) {
 }
 
 
-//3. esto si que me da los puntos estimados
-export async function requestEstimatedMapData(roomName) {
+//3. Esto me da los puntos estimados para una sala
+export async function requestEstimatedMapData(job_id, roomName) {
 
     const response = await fetch(
-        `http://measurements.espaciosoa.com:8000/ia_estimator/mapa/extraer/${roomName}`
+        `${iaEndpoint}/ia_estimator/mapa/extraer`
         , {
-            method: "GET",
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
+            body: JSON.stringify({
+                job_id: job_id,
+                room_name: roomName
+            })
+            ,
         });
     console.log("GETTING ESTIMATED DATA FOR ROOM", response)
 
@@ -70,14 +87,15 @@ export async function requestEstimatedMapData(roomName) {
 }
 
 
-
 export async function requestIAJobStatus(jobId) {
-    const response = await fetch(`http://measurements.espaciosoa.com:8000/ia_estimator/jobStatus/${jobId}`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        }
-    });
+    const response = await fetch(
+        `${iaEndpoint}/ia_estimator/jobStatus/${jobId}`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        });
     console.log(response)
     console.log(response.body)
     const responseContent = await response.json();
@@ -90,22 +108,6 @@ export async function requestIAJobStatus(jobId) {
 
 
 
-export async function requestIAServerAlive() {
-    const response = await fetch(`http://measurements.espaciosoa.com:8000/ia_estimator`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        }
-    });
-    console.log(response)
-    console.log(response.body)
-    const responseContent = await response.json();
-    console.log("RESPONSE CONTENT FOR JOB STATUS", responseContent)
-
-
-    return responseContent
-
-}
 
 
 

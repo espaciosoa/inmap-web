@@ -138,10 +138,10 @@ export async function renderMap(map,
         DISPLAY_BOUNDING_BOX: {
 
 
-            SESSION_LEVEL_BBs: true,
+            SESSION_LEVEL_BBs: false,
             SESION_LEVEL_BBs_configuration: { color: "#ff7800", weight: 0.1 },
 
-            ROOM_LEVEL_BBs: true,
+            ROOM_LEVEL_BBs: false,
             ROOM_LEVEL_BBs_configuration: { color: "#00f7ffff", weight: 0.3 },
 
         }
@@ -409,7 +409,7 @@ export async function renderMap(map,
 
         Object.freeze(nonPiMeasurementsForAllSessionsInThisRoom)
 
-       //2. Calculo las coordenadas globales usando el centro + desplazamiento de cada una de las sesiones
+        //2. Calculo las coordenadas globales usando el centro + desplazamiento de cada una de las sesiones
         const boundingBoxForAllSessionsMeasurements = getLatLongBoundingBox(nonPiMeasurementsForAllSessionsInThisRoom.map(coord => {
             const ownOrigin = sessions.filter((s) => s._id === coord.sessionId)[0].worldPosition
             console.log(`ownOrigin ${JSON.stringify(ownOrigin)}`)
@@ -638,15 +638,18 @@ export function renderMeasurementsForSession(theseMeasurementsMapLayer, session,
     // DISPLAY POINTS
     measurements.forEach(c => {
 
-        if (session._id !== c.sessionId)
+        if (session._id !== c.sessionId) {
+            destroyPopup()
             throw new Error("renderMeasurementsForSession() called with non-matching sessions and measurements")
-
+        }
 
         const ownOrigin = session.worldPosition
 
-        if (!ownOrigin)
+        if (!ownOrigin) {
+            destroyPopup()
             return
 
+        }
         const localRoomCoordsAsLatLong = localToGeo(c.x, c.z, ownOrigin.lat, ownOrigin.lon)
         const latLongCoords = rotation === undefined ?
             localRoomCoordsAsLatLong : rotatePointMap(localRoomCoordsAsLatLong.lat, localRoomCoordsAsLatLong.lon, ownOrigin.lat, ownOrigin.lon, rotation)

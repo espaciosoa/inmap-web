@@ -32,7 +32,20 @@ import { defaultLatLon, renderMap, layerGroups } from "./src/visualization.rende
 import { requestIAServerAlive } from "./src/requests.ia.js"
 
 
+//DISABLE LOGS OF DIFFERENT TYPES
+const logConfig = {
+    log: false,
+    info: true,
+    warn: true,
+    error: true
+}
+if (!logConfig.log) console.log = () => { } 
+if (!logConfig.info) console.info = () => { } 
+if (!logConfig.warn) console.warn = () => { } 
+if (!logConfig.error) console.error = () => { } 
 
+
+  
 
 const { showPopup, hidePopup, destroyPopup, showPopupForT } = initPopup()
 
@@ -148,15 +161,6 @@ if (myState !== null) {
 
     //SHOW IA BUTTONS IF IA SERVER IS UP AND RUNNING
 
-    try {
-        // const iaServerResponse = await requestIAServerAlive()
-        // if (iaServerResponse.success)
-        showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom)
-    }
-    catch (err) {
-        console.error("IA server is down", err)
-    }
-
 
     showRoomsAsSelectOptions(roomOptionsSelect, myState, allRooms, myState.activeRoom)
     showSessionsAsCheckboxes(sessionsCheckboxContainer, myState,
@@ -186,6 +190,15 @@ if (myState !== null) {
 
 
 
+    try {
+        // const iaServerResponse = await requestIAServerAlive()
+        // if (iaServerResponse.success)
+        showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements)
+    }
+    catch (err) {
+        console.error("IA server is down", err)
+    }
+
 };
 
 export const map = initLeafletMapWithProviders()
@@ -203,6 +216,7 @@ map.setView([visualizationCenter.lat, visualizationCenter.lon], 19);
 myState.subscribe("onActiveRoomChanged", async (activeRoom) => {
     showPopup(`Loading Measurement sessions ${activeRoom.name}`, "load")
 
+
     await fetchSessionsIntoState()
 
     showSessionsAsCheckboxes(sessionsCheckboxContainer,
@@ -213,7 +227,9 @@ myState.subscribe("onActiveRoomChanged", async (activeRoom) => {
     showRoomAsTable(ROOM_DIV,
         myState.activeRoom,
     )
-    // hidePopup()
+
+
+    hidePopup()
 })
 myState.subscribe("onActiveSessionsChanged", async (activeSessions) => {
     await fetchMeasurementsIntoState()
@@ -384,7 +400,13 @@ myState.subscribe("onMeasurementsChanged", (activeMeasurements) => {
         fetchMeasurementsIntoState
     )
 
+
+    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements)
+
 })
+
+
+
 
 myState.subscribe("onVisualizedPropertyChanged", (property) => {
     showPopup("Recalculating...", "load")
@@ -394,6 +416,10 @@ myState.subscribe("onVisualizedPropertyChanged", (property) => {
         0,
         property
     )
+
+
+    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements, myState.visualizingProperty === "dbm")
+
 
 })
 

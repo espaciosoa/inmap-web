@@ -56,7 +56,7 @@ const units = new Map<NumericProperty, string>([
 const ranges = new Map<NumericProperty, Range>([
     ['dbm', {
         min: -128,
-        max: 0
+        max: -30
     }],
     ['asuLevel', {
         min: 0,
@@ -199,11 +199,12 @@ export function getPropertyColorForValue(property: NumericProperty, value: numbe
             propRange?.max
         )
 
+        console.log("value in Zero one range?",valueInZeroOneRange) 
 
         return interpolateColor(valueInZeroOneRange
             , [
-                { position: 0, color: "#eb3734" },
-                { position: 1, color: "#34ebde" },
+                { position: 0, color: "#e00000" },
+                { position: 1, color: "#00ffee" },
             ])
     }
     else {
