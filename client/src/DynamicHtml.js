@@ -690,7 +690,7 @@ export function showSessionsAsTables(parent, sessions, refetchLogic) {
 
 
 import { requestIAGlobalTraining, requestIAIndividualTraining, requestIAJobStatus, requestEstimatedMapData, createIAEstimatedMap } from "./requests.ia.js"
-import {setVisualizationCenter,visualizationCenter} from "../client.index.js"
+import { setVisualizationCenter, visualizationCenter } from "../client.index.js"
 import { PinIcon } from "./icons/PinIcon.js";
 let trainingStatus = null;
 let resultIndividual = null;
@@ -711,6 +711,7 @@ import {
 
 export function showIAButtons(parentElem, activeRoom, activeMeasurements, show = true) {
 
+    console.log("SHOULD SHOW IA BUTTONS ? ", show)
 
     const sectionIAButtonsTemplateHTML = `
         <div class="ia-section flex-row align-center" >
@@ -783,16 +784,18 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
 
 
 
-    if (show == false)
-        map.removeLayer(iaMeasurementsLayerGroup)
+    if (show === false) {
+        if (iaMeasurementsLayerGroup)
+            map.removeLayer(iaMeasurementsLayerGroup)
 
+    }
     //Slider de mostrar mediciones estimadas
     const showIAMeasurementsToggleSwitch = SwitchComponent("Show AI estimations",
         false, async (ev) => {
             const isOn = ev.target.checked
 
 
-            if (!isOn && map.hasLayer(iaMeasurementsLayerGroup)) {
+            if (!isOn && iaMeasurementsLayerGroup && map.hasLayer(iaMeasurementsLayerGroup)) {
                 map.removeLayer(iaMeasurementsLayerGroup)
                 showPopupForT("Disabling IA measurements", "load", 2)
                 return
@@ -864,7 +867,9 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
     const IASectionDiv = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(sectionIAButtonsTemplateHTML, {
         actions: actionsContainer
     })
-    if (!show) IASectionDiv.classList.add("hidden")
+
+
+
 
     const iconPlaceholder = IASectionDiv.querySelector('[data-toReplace="icon"]')
 
@@ -874,6 +879,10 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
     )
 
 
+    if (show === false) {
+        parentElem.replaceChildren();  // Just clear everything
+        return;
+    }
 
 
 

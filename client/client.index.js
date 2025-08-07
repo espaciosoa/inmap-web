@@ -192,7 +192,7 @@ if (myState !== null) {
     try {
         // const iaServerResponse = await requestIAServerAlive()
         // if (iaServerResponse.success)
-        showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom,myState.activeMeasurements)
+        showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom,myState.activeMeasurements, myState?.visualizingProperty === "dbm")
     }
     catch (err) {
         console.error("IA server is down", err)
@@ -403,7 +403,7 @@ myState.subscribe("onMeasurementsChanged", (activeMeasurements) => {
     )
 
 
-    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements)
+    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements, myState?.visualizingProperty === "dbm")
 
 })
 
@@ -420,7 +420,7 @@ myState.subscribe("onVisualizedPropertyChanged", (property) => {
     )
 
 
-    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements, myState.visualizingProperty === "dbm")
+    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements, myState?.visualizingProperty === "dbm")
 
 
 })
