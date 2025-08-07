@@ -17,14 +17,15 @@ import {
 import { SwitchComponent } from "./components/switch.component.js"
 
 import { requestEstimatedMapData } from "./requests.ia.js"
-
+import {setVisualizationCenter,visualizationCenter} from "../client.index.js"
 
 // I am using these to group logically related elements in the map (e.g., all measurements related to a session, the heatmap, etc)
 export let layerGroups = []
 
 //Plaza mayor
 export const defaultLatLon = { lat: 40.4233828, lon: -3.7121647 }
-let visualizationCenter = defaultLatLon;
+
+
 
 
 
@@ -153,7 +154,7 @@ export async function renderMap(map,
 
 
     // RESETEO LA POSICIÓN DEL CENTRO DEL MAPA
-    visualizationCenter = sessions.length > 0 ? getAverageLatLng(sessions.map(s => s.worldPosition)) : defaultLatLon;
+    setVisualizationCenter( sessions.length > 0 ? getAverageLatLng(sessions.map(s => s.worldPosition)) : defaultLatLon);
     const visCenter = visualizationCenter
     console.log("Rendering map 🗺️ with center at", visCenter)
 
@@ -326,7 +327,7 @@ export async function renderMap(map,
 
 
             // DISPLAY BOUNDING BOX OF A SINGLE SESSION
-            if (configuration.DISPLAY_BOUNDING_BOX.SESSION_LEVEL_BBs) {
+            if (configuration.DISPLAY_BOUNDING_BOX?.SESSION_LEVEL_BBs) {
 
                 const singleSessionBboxConfiguration = configuration?.DISPLAY_BOUNDING_BOX?.SESION_LEVEL_BBs_configuration
 

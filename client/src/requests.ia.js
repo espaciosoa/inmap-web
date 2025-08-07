@@ -62,6 +62,31 @@ export async function requestIAIndividualTraining(jobId, roomName) {
 }
 
 
+
+export async function createIAEstimatedMap(roomName) {
+
+    const response = await fetch(`${iaEndpoint}/ia_estimator/estimarMapa`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(
+                {
+                    room_name: roomName
+                })
+        }
+    )
+
+    console.log("CREATING ESTIMATED DATA FOR ROOM", response)
+
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT FOR CREATE ESTIMATED REQUEST", responseContent)
+
+    return responseContent
+}
+
+
 //3. Esto me da los puntos estimados para una sala
 export async function requestEstimatedMapData(job_id, roomName) {
 

@@ -29,12 +29,11 @@ import { getPropertyUnit, getFilterablePropertiesList, getNormalizedValueInRange
 import { PageState } from "./dist/PageState.js"
 import { initLeafletMapWithProviders } from "./src/leaflet.map.utils.js"
 import { defaultLatLon, renderMap, layerGroups } from "./src/visualization.render.js"
-import { requestIAServerAlive } from "./src/requests.ia.js"
 
 
 //DISABLE LOGS OF DIFFERENT TYPES
 const logConfig = {
-    log: false,
+    log: true,
     info: true,
     warn: true,
     error: true
@@ -193,7 +192,7 @@ if (myState !== null) {
     try {
         // const iaServerResponse = await requestIAServerAlive()
         // if (iaServerResponse.success)
-        showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements)
+        showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom,myState.activeMeasurements)
     }
     catch (err) {
         console.error("IA server is down", err)
@@ -207,9 +206,12 @@ export let visualizationCenter = {
     lat: myState.activeSessions[0]?.worldPosition.lat ?? defaultLatLon.lat,
     lon: myState.activeSessions[0]?.worldPosition.lon ?? defaultLatLon.lon
 }
+export function setVisualizationCenter(newCenter) {
+  visualizationCenter = newCenter;
+}
+
 
 map.setView([visualizationCenter.lat, visualizationCenter.lon], 19);
-
 
 
 // Make UI react to changes on selected room

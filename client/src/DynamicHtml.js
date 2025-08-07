@@ -10,6 +10,7 @@ import { renderMeasurementsForSession } from "./visualization.render.js"
 import {
     getPropertyColorForValue
 } from "../dist/typed-functions.js"
+
 function isObject(item) {
     return (item && typeof item === "object" && !Array.isArray(item));
 }
@@ -688,7 +689,8 @@ export function showSessionsAsTables(parent, sessions, refetchLogic) {
 
 
 
-import { requestIAGlobalTraining, requestIAIndividualTraining, requestIAJobStatus, requestEstimatedMapData } from "./requests.ia.js"
+import { requestIAGlobalTraining, requestIAIndividualTraining, requestIAJobStatus, requestEstimatedMapData, createIAEstimatedMap } from "./requests.ia.js"
+import {setVisualizationCenter,visualizationCenter} from "../client.index.js"
 import { PinIcon } from "./icons/PinIcon.js";
 let trainingStatus = null;
 let resultIndividual = null;
@@ -700,7 +702,7 @@ let jobStatus = null
 
 let iaMeasurementsLayerGroup = null;
 
-import { map, visualizationCenter } from "../client.index.js"
+import { map } from "../client.index.js"
 import {
     localToGeo
 }
@@ -772,6 +774,7 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
 
             resultIndividual = await requestIAIndividualTraining(trainingStatus?.job_id, activeRoom.name)
             showPopupForT(`${resultIndividual.message}`, "ok", 2)
+            const createIAEstimatedMapRequest = showPopupWhile("Generating estimated map", "load", async () => createIAEstimatedMap(activeRoom.name))
         }
         ,
         label: `Run training for '${activeRoom.name}' `
@@ -780,7 +783,7 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
 
 
 
-    if(show == false)
+    if (show == false)
         map.removeLayer(iaMeasurementsLayerGroup)
 
     //Slider de mostrar mediciones estimadas
@@ -809,6 +812,8 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
             iaMeasurementsLayerGroup = L.layerGroup().addTo(map); // Layer to store measurements in a group
 
 
+
+
             (await estimations).map((est) => {
                 //FIXME Adjust to fit bounding box maybe??
                 const localRoomCoordsAsLatLong = localToGeo(est.x, est.z, visualizationCenter.lat, visualizationCenter.lon)
@@ -823,12 +828,12 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
                 if (minDistance <= 3.5) {
                     let measurementPointInMap = L.circle(localRoomCoordsAsLatLong, {
                         className: 'animated-marker',
-                        color: getPropertyColorForValue("dbm",est["dbm"]),
+                        color: getPropertyColorForValue("dbm", est["dbm"]),
                         fillOpacity: 0.05,
                         radius: 0.05
                     })
                         .bindTooltip(`IA estimated point ${est["dbm"]} `)
-                        .addTo(iaMeasurementsLayerGroup).bringToBack();  
+                        .addTo(iaMeasurementsLayerGroup).bringToBack();
 
                 }
             })
