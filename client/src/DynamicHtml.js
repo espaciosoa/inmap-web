@@ -49,7 +49,7 @@ export function showRoomsAsSelectOptions(selectItem, state, rooms, selected = un
             optionNode.selected = true;
 
 
-        // TODO Event subscription:
+        
         selectItem.addEventListener("change", (ev) => {
             // console.log("ROOM OPTION CHANGE")
             const roomIdSelected = ev.target.value
@@ -175,7 +175,7 @@ export function showSessionsAsCheckboxes(parent, myState, dataArray, selected = 
 
 
 
-        //TODO: Event subscription pending here
+        
         if (DEBUG) console.log("Adding onChange events to checkboxes")
         checkboxDOM_Node.addEventListener("change", (ev) => {
             const checkbox = ev.target
@@ -714,16 +714,18 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
     console.log("SHOULD SHOW IA BUTTONS ? ", show)
 
     const sectionIAButtonsTemplateHTML = `
-        <div class="ia-section flex-row align-center" >
+        <div class="ia-section flex-row align-center wrap" >
             <header class="flex-col">
             <template data-toReplace="icon"></template>
                <h3> Artificial Intelligence </h3>
             </header>
             <!-- The actions next --->
                 {{actions}}
+        <p class="basis-full">
+        *For improved accuracy it is recommended to first carry out a Global Training
+        </p>
          </div>
     `
-
 
     const buttonTemplateHTML = `
     <button 
@@ -765,7 +767,7 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
         }
 
         ,
-        label: "Init global training"
+        label: "1. Run Global Training"
     })
 
 
@@ -778,7 +780,7 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
             const createIAEstimatedMapRequest = showPopupWhile("Generating estimated map", "load", async () => createIAEstimatedMap(activeRoom.name))
         }
         ,
-        label: `Run training for '${activeRoom.name}' `
+        label: `2. Run Room training for '${activeRoom.name}' `
     })
 
 
@@ -818,7 +820,7 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
 
 
             (await estimations).map((est) => {
-                //FIXME Adjust to fit bounding box maybe??
+                //FIXME ? Adjust to fit bounding box maybe??
                 const localRoomCoordsAsLatLong = localToGeo(est.x, est.z, visualizationCenter.lat, visualizationCenter.lon)
 
 
@@ -883,7 +885,6 @@ export function showIAButtons(parentElem, activeRoom, activeMeasurements, show =
         parentElem.replaceChildren();  // Just clear everything
         return;
     }
-
 
 
     parentElem.replaceChildren(

@@ -932,6 +932,10 @@ section.collapsible:not(.collapsed)::after {
     align-items: center;
 }
 
+button{
+    cursor: pointer;
+}
+
 
 
 
@@ -972,4 +976,9 @@ section.collapsible:not(.collapsed)::after {
     background: #86c886;
   padding: 0.3em 1em;
   border-radius: 12px;
+}
+
+
+.basis-full{
+    flex-basis: 100%
 }
