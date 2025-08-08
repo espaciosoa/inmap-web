@@ -34,6 +34,7 @@ body {
     background: url(./default-image.jpg) cover;
     color: white;
 }
+
 html {
     margin: 0;
     padding: 0;
@@ -94,8 +95,8 @@ section {
 section h2 {
     padding: 0.5em 1em;
     font-size: 1.5em;
-    border: 1px solid white;
-
+    border: 0.3rem solid #ffffff3d;
+    padding: 0.5em 0.3em
 }
 
 
@@ -126,21 +127,11 @@ main {
 
 
 
-/* .grid-form-map {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
+.grid-form-map {
 
-    align-items: center;
     justify-items: center;
 
-
-    @media screen and (max-width:480px) {
-
-        grid-template-columns: 1fr;
-        gap: 3em;
-    }
-
-} */
+}
 
 
 .viz-controls-form {
@@ -278,7 +269,8 @@ input[type="checkbox"] {
 .session-name {
     font-style: italic;
     font-weight: bold;
-    color: #5ad8ff;
+    color:   #93f293;
+    /* #5ad8ff;*/
 }
 
 
@@ -536,7 +528,7 @@ body:has(.my-load-popup.open),
     /* Use 100vh to ensure full viewport height */
 
     background-color: rgba(48, 119, 113, 0.37);
-   
+
 
     backdrop-filter: blur(5px);
     z-index: 9999;
@@ -853,36 +845,140 @@ section.collapsible:not(.collapsed)::after {
 
 
 
-.accordion{
+.accordion {
     display: none;
 }
-.accordion.open{
+
+.accordion.open {
     display: grid;
 }
 
-.accordion-button{
-  all: unset;
+.accordion-button {
+    all: unset;
     font-weight: bold;
     color: rgb(97, 139, 173);
     margin: 0.3em 0;
-    padding:0.2em 1em;
-    
+    padding: 0.2em 1em;
+
 }
-.accordion-button::after{
+
+.accordion-button::after {
     content: "🔻"
 }
 
 
 
-.kv-pair{
+.kv-pair {
     text-align: center;
     display: grid;
     grid-template-columns: 1fr 1fr;
 }
 
-.key{
+.key {
     font-weight: bold;
 }
 
 
 
+
+
+.currently-displaying h* {
+    all: unset;
+}
+
+.currently-displaying {
+    border: 0.3rem solid #ffffff3d;
+    padding: 0.5em 0em;
+}
+
+
+.currently-displaying .room-header-text {
+    border: none !important;
+}
+
+.currently-displaying .state-sect-header {
+
+    display: grid;
+    grid-template-columns: 0.5fr 3fr;
+    align-items: center;
+    justify-items: center;
+
+}
+
+
+
+
+
+.flex-row {
+    display: flex;
+
+    gap: 1em;
+    justify-content: space-evenly;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    gap: 1em;
+}
+
+.flex-row.wrap {
+    flex-wrap: wrap;
+}
+
+.align-center {
+    align-items: center;
+}
+
+button{
+    cursor: pointer;
+}
+
+
+
+
+.white {
+    color: white !important;
+}
+
+.align-self-center {
+    align-self: center;
+}
+
+#ia-integration {
+    .ia-section {
+
+        border: 0.3rem solid #ffffff3d;
+        padding: 0.5em 0em;
+
+
+        button {
+            padding: 0.8em 1em;
+            /* background-color: #5ad8ff;
+        color:white; */
+            width: max-content;
+        }
+    }
+}
+
+
+.rotated {
+    transform: rotateZ(-30deg);
+}
+
+
+
+.sessions-summary-title{
+
+
+    background: #86c886;
+  padding: 0.3em 1em;
+  border-radius: 12px;
+}
+
+
+.basis-full{
+    flex-basis: 100%
+}

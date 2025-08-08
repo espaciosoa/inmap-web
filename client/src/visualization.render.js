@@ -16,13 +16,16 @@ import {
 
 import { SwitchComponent } from "./components/switch.component.js"
 
+import { requestEstimatedMapData } from "./requests.ia.js"
+import {setVisualizationCenter,visualizationCenter} from "../client.index.js"
 
 // I am using these to group logically related elements in the map (e.g., all measurements related to a session, the heatmap, etc)
 export let layerGroups = []
 
 //Plaza mayor
 export const defaultLatLon = { lat: 40.4233828, lon: -3.7121647 }
-let visualizationCenter = defaultLatLon;
+
+
 
 
 
@@ -131,13 +134,27 @@ export async function renderMap(map,
 
     const { showPopup, hidePopup, destroyPopup } = initPopup()
 
+    //Acts as feature flags to isolate problems or enable-disable quickly some features
+    const configuration = Object.freeze({
+        DISPLAY_BOUNDING_BOX: {
 
-    const SHOW_BBOX = false
+
+            SESSION_LEVEL_BBs: false,
+            SESION_LEVEL_BBs_configuration: { color: "#ff7800", weight: 0.1 },
+
+            ROOM_LEVEL_BBs: false,
+            ROOM_LEVEL_BBs_configuration: { color: "#00f7ffff", weight: 0.3 },
+
+        }
+    })
+
+
+    // const configuration.DISPLAY_BOUNDING_BOX.SESSION_LEVEL_BBs = true
     const RENDER_HEATMAP = true
 
 
     // RESETEO LA POSICIÓN DEL CENTRO DEL MAPA
-    visualizationCenter = sessions.length > 0 ? getAverageLatLng(sessions.map(s => s.worldPosition)) : defaultLatLon;
+    setVisualizationCenter( sessions.length > 0 ? getAverageLatLng(sessions.map(s => s.worldPosition)) : defaultLatLon);
     const visCenter = visualizationCenter
     console.log("Rendering map 🗺️ with center at", visCenter)
 
@@ -176,6 +193,8 @@ export async function renderMap(map,
     const allSessionsLayerGroup = L.layerGroup().addTo(map);
 
     /* Iterate over sessions and display their data */
+
+
     sessions.forEach(s => {
 
         if (!s.worldPosition)
@@ -191,6 +210,7 @@ export async function renderMap(map,
 
         const singleSessionLayerGroup = L.layerGroup().addTo(map); // Layer to store session info in a group
         const singleSessionMeasurementsLayerGroup = L.layerGroup().addTo(map); // Layer to store measurements in a group
+
 
 
         //PLOT INFO OF A SPECIFIC SESSION
@@ -306,8 +326,12 @@ export async function renderMap(map,
         if (nonPiMeasurementPointsForSession.length > 0) {
 
 
-            if (SHOW_BBOX) {
-                // Compute bounding box
+            // DISPLAY BOUNDING BOX OF A SINGLE SESSION
+            if (configuration.DISPLAY_BOUNDING_BOX?.SESSION_LEVEL_BBs) {
+
+                const singleSessionBboxConfiguration = configuration?.DISPLAY_BOUNDING_BOX?.SESION_LEVEL_BBs_configuration
+
+                // Compute bounding box for a single session
                 const boundingBoxForSessionMeasurements = getLatLongBoundingBox(nonPiMeasurementPointsForSession.map(coord => {
                     const ownOrigin = s.worldPosition
                     const thisSessionCoordsAsLatLong = localToGeo(coord.x, coord.z, ownOrigin.lat, ownOrigin.lon)
@@ -324,16 +348,31 @@ export async function renderMap(map,
                 if (bboxInputToLeaflet)
                     L.rectangle(
                         bboxInputToLeaflet,
-                        { color: "#ff7800", weight: 0.1 }).addTo(boundingBoxForSessionLayerGroup);
+                        configuration.DISPLAY_BOUNDING_BOX.SESION_LEVEL_BBs_configuration ??
+                        { color: "#ff7800", weight: 0.1 }
+                    ).addTo(boundingBoxForSessionLayerGroup);
+
+
+
+
+                //QUICK TEST TO ATTEMPT TO SHOW THE map coordinates over a real coords map
+                // requestEstimatedMapData().then((
+                //     res
+                // ) => {
+                //     console.log("res.ia.estimated", res)
+
+                // })
+
+
 
             }
-
+            // END DISPLAY BOUNDING BOX OF A SINGLE SESSION
 
 
             //PLOT MEASUREMENTS FOR A SPECIFIC SESSION
             const pointRenderingPromise = renderMeasurementsForSession(singleSessionMeasurementsLayerGroup, s, nonPiMeasurementPointsForSession, whatToDisplay)
             renderPromisesList.push(pointRenderingPromise)
-            console.log("promse rendering", pointRenderingPromise)
+            console.log("Point Rendering Promise", pointRenderingPromise)
 
 
 
@@ -353,13 +392,62 @@ export async function renderMap(map,
 
 
 
+
+    // DISPLAY OVERALL ACTIVE SESSIONS BOUNDING BOX -----------------------------------------
+    if (configuration.DISPLAY_BOUNDING_BOX.ROOM_LEVEL_BBs) {
+
+        console.groupCollapsed(`Computing bounding box for whole room '${sessions[0]?.roomId}'`)
+
+        //1. Obtain all points of all sessions (excluding raspberry pi measurements) to use i0n the computation of the overall bounding box
+        let nonPiMeasurementsForAllSessionsInThisRoom = []
+        sessions.forEach(s => {
+            if (!s.worldPosition)
+                return
+            const nonPiMeasurementPointsForSession = points.filter(p =>
+                p.sessionId === s._id && p.measurementDevice !== "RaspberryPi4B")
+            nonPiMeasurementsForAllSessionsInThisRoom = [...nonPiMeasurementsForAllSessionsInThisRoom, ...nonPiMeasurementPointsForSession] // REMOVE ME AT ONE POINT
+        })
+
+        Object.freeze(nonPiMeasurementsForAllSessionsInThisRoom)
+
+        //2. Calculo las coordenadas globales usando el centro + desplazamiento de cada una de las sesiones
+        const boundingBoxForAllSessionsMeasurements = getLatLongBoundingBox(nonPiMeasurementsForAllSessionsInThisRoom.map(coord => {
+            const ownOrigin = sessions.filter((s) => s._id === coord.sessionId)[0].worldPosition
+            console.log(`ownOrigin ${JSON.stringify(ownOrigin)}`)
+            const thisSessionCoordsAsLatLong = localToGeo(coord.x, coord.z, ownOrigin.lat, ownOrigin.lon)
+            return { lat: thisSessionCoordsAsLatLong.lat, lon: thisSessionCoordsAsLatLong.lon }
+        }))
+        console.log("nonPiMeasurements FOR WHOLE BBOX", boundingBoxForAllSessionsMeasurements)
+
+
+        const wholeRoomBboxInputToLeaflet = [[boundingBoxForAllSessionsMeasurements.minLat, boundingBoxForAllSessionsMeasurements.minLon],
+        [boundingBoxForAllSessionsMeasurements.maxLat, boundingBoxForAllSessionsMeasurements.maxLon]]
+
+        const boundingBoxFullRoomForSessionLayerGroup = L.layerGroup().addTo(map);
+
+        console.log(`BOUNDING BOX FOR ROOM ${JSON.stringify(boundingBoxForAllSessionsMeasurements)}`)
+        if (wholeRoomBboxInputToLeaflet)
+            L.rectangle(
+                wholeRoomBboxInputToLeaflet,
+                configuration?.DISPLAY_BOUNDING_BOX.ROOM_LEVEL_BBs_configuration ??
+                { color: "#e5ff00ff", weight: 0.3 }
+            ).addTo(boundingBoxFullRoomForSessionLayerGroup);
+
+
+        console.groupEnd()
+    }
+    // END DISPLAY OVERALL ACTIVE SESSIONS BOUNDING BOX -------------------------------------
+
+
+
+
     if (RENDER_HEATMAP) {
         // console.log("POINTS (PRE HEATMAP)", points)
         // Phone measurements for this session
         const nonPiMeasurementPoints = points.filter(p =>
             p.measurementDevice !== "RaspberryPi4B")
 
-        console.log(nonPiMeasurementPoints)
+        // console.log(nonPiMeasurementPoints)
         renderHeatmap(map, sessions, nonPiMeasurementPoints, whatToDisplay);
     }
 
@@ -541,7 +629,7 @@ function renderSession(sessionMapLayer, session, piCorrectionPoint = null, onCor
 
 
 
-function renderMeasurementsForSession(theseMeasurementsMapLayer, session, measurements, whatToDisplay, rotation = 0, correctionObj = null) {
+export function renderMeasurementsForSession(theseMeasurementsMapLayer, session, measurements, whatToDisplay, rotation = 0, correctionObj = null) {
 
     console.log(`RENDERING MEASUREMENTS FOR SESSION ${JSON.stringify(correctionObj)}`)
 
@@ -551,15 +639,18 @@ function renderMeasurementsForSession(theseMeasurementsMapLayer, session, measur
     // DISPLAY POINTS
     measurements.forEach(c => {
 
-        if (session._id !== c.sessionId)
+        if (session._id !== c.sessionId) {
+            destroyPopup()
             throw new Error("renderMeasurementsForSession() called with non-matching sessions and measurements")
-
+        }
 
         const ownOrigin = session.worldPosition
 
-        if (!ownOrigin)
+        if (!ownOrigin) {
+            destroyPopup()
             return
 
+        }
         const localRoomCoordsAsLatLong = localToGeo(c.x, c.z, ownOrigin.lat, ownOrigin.lon)
         const latLongCoords = rotation === undefined ?
             localRoomCoordsAsLatLong : rotatePointMap(localRoomCoordsAsLatLong.lat, localRoomCoordsAsLatLong.lon, ownOrigin.lat, ownOrigin.lon, rotation)
@@ -649,7 +740,7 @@ function renderMeasurementsForSession(theseMeasurementsMapLayer, session, measur
         keyValListHTMLTemplate = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(keyValListHTMLTemplate, {});
 
         const keyValItemsAsNodes = Object.entries(c.full).map(([key, value], idx) => {
-            console.log(`${key} , ${value}`)
+            // console.log(`${key} , ${value}`)
             return JSUtils.replaceTemplatePlaceholdersAndBindHandlers(keyValPairHTMLTemplate,
                 {
                     key: key,

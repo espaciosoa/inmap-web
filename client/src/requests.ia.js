@@ -1,63 +1,150 @@
-/**
- * Makes a call to the api that is meant to obtain IA generated maps
- */
-export async function requestIAAPI() {
-    const response = await fetch("http://localhost:8000/ia/testReturnImage", {
-        method: "GET",
-    });
-    console.log(response)
-    console.log(response.body)
-    return await response.json();
-}
-
-export async function requestIATraining(roomName) {
-    const response = await fetch(`http://localhost:8000/ia/runTraining/${roomName}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            signalParameter: "dbm",
-            epochs: 10,
-        }),
-    });
-    console.log(response)
-    console.log(response.body)
-    const responseContent = await response.json();
+// const iaEndpoint = "http://measurements.espaciosoa.com:8000"
+const iaEndpoint = "https://ia.measurements.espaciosoa.com"
 
 
-    return responseContent.data
-
-}
 
 
-export async function requestTrainingJobStatus(jobId) {
-    const response = await fetch(`http://localhost:8000/ia/jobStatus/${jobId}`, {
+// Ver si el servidor está activo
+export async function requestIAServerAlive() {
+    const response = await fetch(`${iaEndpoint}/ia_estimator`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
         }
     });
+
+    const responseContent = await response.json();
+
+    // console.log("Server status", responseContent)
+    return responseContent
+
+}
+
+
+//1. Entrenamiento global
+export async function requestIAGlobalTraining() {
+    const response = await fetch(
+        `${iaEndpoint}/ia_estimator/runGlobalTraining`,
+        {
+            method: "POST",
+        });
+    console.log("GLOBAL TRAINING ENDPOINT", response)
+
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT REQUEST IA GLOBAL", responseContent)
+    return responseContent
+}
+
+
+//2. Esto genera el dataset para una room concreta
+export async function requestIAIndividualTraining(jobId, roomName) {
+
+    const body = JSON.stringify({
+        job_id: jobId,
+        room_name: roomName
+    })
+
+    const response = await fetch(
+        `${iaEndpoint}/ia_estimator/runIndividualTraining`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: body,
+        });
+    console.log("IA INDIVIDUAL", response)
+
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT REQUEST IA INDIVIDUAL", responseContent)
+
+    return responseContent
+}
+
+
+
+export async function createIAEstimatedMap(roomName) {
+
+    const response = await fetch(`${iaEndpoint}/ia_estimator/estimarMapa`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(
+                {
+                    room_name: roomName
+                })
+        }
+    )
+
+    console.log("CREATING ESTIMATED DATA FOR ROOM", response)
+
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT FOR CREATE ESTIMATED REQUEST", responseContent)
+
+    return responseContent
+}
+
+
+//3. Esto me da los puntos estimados para una sala
+export async function requestEstimatedMapData(job_id, roomName) {
+
+    const response = await fetch(
+        `${iaEndpoint}/ia_estimator/mapa/extraer`
+        , {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                job_id: job_id,
+                room_name: roomName
+            })
+            ,
+        });
+    console.log("GETTING ESTIMATED DATA FOR ROOM", response)
+
+    const responseContent = await response.json();
+    console.log("RESPONSE CONTENT FOR MAP REQUEST", responseContent)
+
+    return responseContent
+}
+
+
+export async function requestIAJobStatus(jobId) {
+    const response = await fetch(
+        `${iaEndpoint}/ia_estimator/jobStatus/${jobId}`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        });
     console.log(response)
     console.log(response.body)
     const responseContent = await response.json();
+    console.log("RESPONSE CONTENT FOR JOB STATUS", responseContent)
 
 
-    return responseContent.data
+    return responseContent
 
 }
 
 
 
 
-export async function requestIAAPIReal(roomName) {
-    const response = await fetch(`http://localhost:8000/ia/inference/${roomName}`, {
-        method: "GET",
-    });
-    console.log(response)
-    console.log(response.body)
-    return await response.json();
-}
+
+
+
+
+
+
+
+
+
+
+
 
 
 

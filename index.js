@@ -6,6 +6,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors')
 const path = require('path');
+const http = require("http")
 
 
 // Read global .env
@@ -68,12 +69,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // To use cookie parser
 app.use(cookieParser());
-// Create the HTTPS server
-https.createServer(sslOptions, app).listen(process.env.PORT, () => {
-  console.log(`--------------------------------------------------------------------------`)
-  console.log(`🌐 HTTPS server is running at https://${process.env.HOST}:${process.env.PORT}`);
-  console.log(`💾 MongoDB instance running at https://${process.env.HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB_NAME}\n --------------------------------------------------------------------------`)
-});
+
+
+
+
+
+
+if (!process.env.INSECURE)
+  // Create the HTTPS server
+  https.createServer(sslOptions, app).listen(process.env.PORT, () => {
+    console.log(`--------------------------------------------------------------------------`)
+    console.log(`🌐 HTTPS server is running at https://${process.env.HOST}:${process.env.PORT}`);
+    console.log(`💾 MongoDB instance running at https://${process.env.HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB_NAME}\n --------------------------------------------------------------------------`)
+  });
+
+else
+  http.createServer(app).listen(process.env.PORT, () => {
+    console.log(`🌐 HTTP server is running at http://${process.env.HOST}:${process.env.PORT}`);
+  });
 
 
 
@@ -171,7 +184,7 @@ async function raspberryPiMeasurementsProcessing() {
 
     console.log("Processing unassigned pi measurement", {
       _id: piMeasurement._id, timestamp: piMeasurement.timestamp,
-      roomId:piMeasurement.roomId,
+      roomId: piMeasurement.roomId,
       room: associatedRoom.name
     })
 
@@ -236,7 +249,7 @@ async function raspberryPiMeasurementsProcessing() {
     if (possibleAssignableSessionsResult.length < 1) {
       console.log("NO CANDIDATES FOUND FOR THIS PI MEASUREMENT")
       //probably should delete the unassigned 
-      await RoomMeasurement.deleteOne({_id:piMeasurement._id})
+      await RoomMeasurement.deleteOne({ _id: piMeasurement._id })
       continue
     }
     // Assign to closest session in time

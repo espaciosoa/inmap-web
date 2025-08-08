@@ -115,17 +115,19 @@ export function initPopup() {
 
 
 
-    function showPopupForT(text, type, seconds) {
+    function showPopupForT(text, type, seconds, callback=null) {
         showPopup(text, type)
         setTimeout(() => {
             hidePopup()
+            callback?.()
         }, seconds * 1000)
     }
 
     async function showPopupWhile(text, type, asyncFunction) {
         showPopup(text, type)
-        await asyncFunction
+        const result  = await asyncFunction()
         hidePopup()
+        return result
     }
 
     return { showPopup, hidePopup, destroyPopup, showPopupWhile, showPopupForT };

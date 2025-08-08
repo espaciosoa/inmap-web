@@ -18,8 +18,8 @@ import JSUtils from "./src/Helpers.js"
 import {
     showRoomsAsSelectOptions, showSessionsAsCheckboxes, showNumericPropertiesAsSelect,
     showMeasurementsAsTable, showRoomAsTable, showSessionsAsTables,
-    showStateInformationSection
-
+    showStateInformationSection,
+    showIAButtons
 } from "./src/DynamicHtml.js"
 
 import { mapAllowInteraction } from "./src/map.interaction.control.js"
@@ -29,6 +29,22 @@ import { getPropertyUnit, getFilterablePropertiesList, getNormalizedValueInRange
 import { PageState } from "./dist/PageState.js"
 import { initLeafletMapWithProviders } from "./src/leaflet.map.utils.js"
 import { defaultLatLon, renderMap, layerGroups } from "./src/visualization.render.js"
+
+
+//DISABLE LOGS OF DIFFERENT TYPES
+const logConfig = {
+    log: true,
+    info: true,
+    warn: true,
+    error: true
+}
+if (!logConfig.log) console.log = () => { } 
+if (!logConfig.info) console.info = () => { } 
+if (!logConfig.warn) console.warn = () => { } 
+if (!logConfig.error) console.error = () => { } 
+
+
+  
 
 const { showPopup, hidePopup, destroyPopup, showPopupForT } = initPopup()
 
@@ -40,6 +56,12 @@ const allRooms = await getRooms();
 
 console.log("🏠 ROOMS ", allRooms);
 console.groupEnd()
+
+
+
+
+
+
 
 
 //add check no rooms
@@ -57,10 +79,15 @@ else {
 // Encapsulating State of the page in an object with custom event listeners on change (pub/sub scheme)
 let myState = null
 
+
+
+
 try {
 
 
-    const DEFAULT_ROOM_IDX = allRooms.length - 1 //allRooms.length - 1
+    const DEFAULT_ROOM_IDX = 0 //allRooms.length - 1 //allRooms.length - 1
+
+
 
     const sessionsForDefaultRoom = (await getSessionsForRoom(allRooms[DEFAULT_ROOM_IDX]._id)).data
     console.log("📱📏 SESSIONS ", sessionsForDefaultRoom)
@@ -78,6 +105,10 @@ catch (error) {
     console.error("Error initing the state")
 
 }
+
+
+
+
 
 // SUPER IMPORTANT
 // FETCHING  FUNCTIONS
@@ -121,8 +152,14 @@ const SESSIONS_DIV = document.querySelector(".tables.sessions")
 const MEASUREMENTS_DIV = document.querySelector(".tables.measurements")
 const ROOM_DIV = document.querySelector(".tables.room")
 
+
+
+
 // Init UI with the Initial State
 if (myState !== null) {
+
+    //SHOW IA BUTTONS IF IA SERVER IS UP AND RUNNING
+
 
     showRoomsAsSelectOptions(roomOptionsSelect, myState, allRooms, myState.activeRoom)
     showSessionsAsCheckboxes(sessionsCheckboxContainer, myState,
@@ -152,22 +189,35 @@ if (myState !== null) {
 
 
 
+    try {
+        // const iaServerResponse = await requestIAServerAlive()
+        // if (iaServerResponse.success)
+        showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom,myState.activeMeasurements, myState?.visualizingProperty === "dbm")
+    }
+    catch (err) {
+        console.error("IA server is down", err)
+    }
+
 };
 
-const map = initLeafletMapWithProviders()
+export const map = initLeafletMapWithProviders()
 
-let visualizationCenter = {
+export let visualizationCenter = {
     lat: myState.activeSessions[0]?.worldPosition.lat ?? defaultLatLon.lat,
     lon: myState.activeSessions[0]?.worldPosition.lon ?? defaultLatLon.lon
 }
+export function setVisualizationCenter(newCenter) {
+  visualizationCenter = newCenter;
+}
+
 
 map.setView([visualizationCenter.lat, visualizationCenter.lon], 19);
-
 
 
 // Make UI react to changes on selected room
 myState.subscribe("onActiveRoomChanged", async (activeRoom) => {
     showPopup(`Loading Measurement sessions ${activeRoom.name}`, "load")
+
 
     await fetchSessionsIntoState()
 
@@ -179,7 +229,9 @@ myState.subscribe("onActiveRoomChanged", async (activeRoom) => {
     showRoomAsTable(ROOM_DIV,
         myState.activeRoom,
     )
-    // hidePopup()
+
+
+    hidePopup()
 })
 myState.subscribe("onActiveSessionsChanged", async (activeSessions) => {
     await fetchMeasurementsIntoState()
@@ -350,7 +402,13 @@ myState.subscribe("onMeasurementsChanged", (activeMeasurements) => {
         fetchMeasurementsIntoState
     )
 
+
+    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements, myState?.visualizingProperty === "dbm")
+
 })
+
+
+
 
 myState.subscribe("onVisualizedPropertyChanged", (property) => {
     showPopup("Recalculating...", "load")
@@ -360,6 +418,10 @@ myState.subscribe("onVisualizedPropertyChanged", (property) => {
         0,
         property
     )
+
+
+    showIAButtons(document.querySelector("#ia-integration"), myState.activeRoom, myState.activeMeasurements, myState?.visualizingProperty === "dbm")
+
 
 })
 

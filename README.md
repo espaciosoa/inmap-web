@@ -36,6 +36,7 @@ For Raspberry pi measurements, they are all assumed to be part of the closest me
 - raw integration wih IA that generates heatmaps (prototype- the integration code lives in yet another repo)
 - Login screen and frontend authentication using https only cookies
 - Bare-bones integration with IA for generation of heatmaps (in testing right now) 
+- IA integration to generate estimated values around the real existing datapoints.
 
 ## Backend details:
 The backend is responsible to centralize the generation of ids of the application and storing data to be visualized. Additionally, measurements from raspberry pis are remapped so that they can be displayed along with phone-captured values.
@@ -75,8 +76,9 @@ npm run client-dev
 
 <p align="center">
   <img src=".showcase/upper.png" alt="Header part" width="80%" />
-  <!-- <img src=".showcase/estimated.png" alt="Visualization Part" width="80%"  /> -->
-  <img src=".showcase/tables.png" alt="Tables" width="80%" />
+  <img  src=".showcase/measurements-full-detail.png" alt="Measurements detail" width="80%"  /> 
+  <img  src=".showcase/IA.gif" alt="Visualization Part" width="80%"  /> 
+  <img  src=".showcase/tables.png" alt="Tables" width="80%" />
 </p>
 
 
@@ -107,9 +109,6 @@ The traffic to the deployment server uses NGINX to redirect traffic directly to 
 Let's encrpyt certificates to use ciphered traffic have been generated automatically using Certbot. These are trusted by default from Android devices and thus, bad practices can be avoided (such as using a self-signed certificate)
 
 [![SSL by Certbot](https://img.shields.io/badge/SSL-Certbot-brightgreen?logo=letsencrypt&logoColor=white)](https://certbot.eff.org/)
-
-## Future work | ongoing improvements:
-- Properly integrating with AI for heatmap generation (it is extremely slow).
 
 
 <hr/>

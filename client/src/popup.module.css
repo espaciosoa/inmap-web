@@ -1,3 +1,10 @@
+
+:root {
+    --popup-bg-color : rgb(97, 139, 173);/*#3D3D3D;*/
+    --popup-text-color : white;
+}
+
+
 .hide-scrollbar {
     overflow: auto;
     scrollbar-width: none;
@@ -56,19 +63,22 @@
 
 .my-load-popup {
 
-    min-width: 30%;
+    border: white 2px solid;
+    min-width: 40%;
+    min-height: 40vh;
     max-width: 40vw;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 10000;
-    background-color: #3D3D3D;
+    background-color:var(--popup-bg-color) ;
 
-    color: white;
+    color: var(--popup-text-color);
+    
     padding: 1em;
     border-radius: 1em;
-    font-size: large;
+    font-size: medium;
     padding: 1em;
 
 }
@@ -87,14 +97,14 @@
     /* all: unset; */
 
     word-wrap: break-word;
-    word-break: break-all;
+    /* word-break: break-all; */
     padding: 1em;
     font-size: 1.5em;
     font-weight: bold;
-    border: 1px solid white;
+    /* border: 1px solid white; */
     border-radius: 12px;
-    background-color: #3D3D3D;
-    max-height: 200px;
+    background-color: var(--popup-bg-color);
+    /* max-height: 200px; */
 
 
     overflow: hidden;
@@ -143,7 +153,8 @@
 }
 
 .loading-svg {
-    color: rgb(111, 158, 0);
+    /* color: rgb(111, 158, 0); */
+     color: var(--popup-text-color);
 }
 
 .loading-svg:not(.show) {

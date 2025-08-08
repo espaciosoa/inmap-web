@@ -2,7 +2,14 @@
 import JSUtils from "./Helpers.js";
 import { getNaturalLanguageDate } from "/src/converters.js";
 import { putSession, deleteSession, deleteMeasurement } from "./requests.js";
-import { validateLat, validateLong } from "./geo.utils.js";
+import { getDistanceInMeters, validateLat, validateLong, getMinDistanceOfLatLonPointToSetOfPoints } from "./geo.utils.js";
+import { SwitchComponent } from "./components/switch.component.js";
+import { initPopup } from "./popup.js";
+import { AIICon } from "./icons/AIIcon.js";
+import { renderMeasurementsForSession } from "./visualization.render.js"
+import {
+    getPropertyColorForValue
+} from "../dist/typed-functions.js"
 
 function isObject(item) {
     return (item && typeof item === "object" && !Array.isArray(item));
@@ -42,7 +49,7 @@ export function showRoomsAsSelectOptions(selectItem, state, rooms, selected = un
             optionNode.selected = true;
 
 
-        // TODO Event subscription:
+        
         selectItem.addEventListener("change", (ev) => {
             // console.log("ROOM OPTION CHANGE")
             const roomIdSelected = ev.target.value
@@ -67,17 +74,21 @@ export function showStateInformationSection(state) {
 
     //Showing in the page for which session I am showing info
     const myDivTemplate = `<section class="currently-displaying"> 
-        <header>
-            <h2> Room: 
+        <header class="state-sect-header" >
+            <template data-toReplace="icon"></template>
+            <h2 class="room-header-text"> Room: 
                 <span class="room-name">{{roomName}}</span>
                 <span class="room-id">{{roomId}}</span>
             </h2>
-            <h3> Session/s: </h3>
+        </header> 
+        <div class="flex-col">
+            <h3 class="sessions-summary-title"> Session/s ({{numSessions}}):  </h3>
                 <div class="sessions-displayed-list"> 
                     <!-- Dynamic filling (list of sessions being displayed)-->
-                <div class="sessions-displayed-list"> 
-        </header> 
-         <p> total measurements: {{measurements}} </p>  
+                </div > 
+                   <p> Total measurements: {{measurements}} </p>  
+        </div>
+      
       </section>`
 
 
@@ -95,8 +106,10 @@ export function showStateInformationSection(state) {
 
 
     const myStateSummary = JSUtils.replaceTemplatePlaceholders(myDivTemplate, {
+
         roomName: `${state.activeRoom.name}`,
         roomId: `${state.activeRoom._id}`,
+        numSessions: `${state.activeSessions.length}`,
         measurements: state.activeMeasurements.length
     })
 
@@ -107,6 +120,11 @@ export function showStateInformationSection(state) {
 
     const myStateSummaryAlmostFilled = JSUtils.txtToHTMLNode(myStateSummary)
     const sessionsContainer = myStateSummaryAlmostFilled.querySelector(".sessions-displayed-list")
+
+
+    //Add icon for this section
+    const iconPlaceholder = myStateSummaryAlmostFilled.querySelector('[data-toReplace="icon"]')
+    iconPlaceholder.replaceWith(PinIcon({ fill: "#ffffff", size: "2em", cssClasses: ["rotated"] }))
 
     sessionsContainer.replaceChildren(...allSessionSpansNodes)
     measurementsContainer.replaceChildren(myStateSummaryAlmostFilled)
@@ -157,7 +175,7 @@ export function showSessionsAsCheckboxes(parent, myState, dataArray, selected = 
 
 
 
-        //TODO: Event subscription pending here
+        
         if (DEBUG) console.log("Adding onChange events to checkboxes")
         checkboxDOM_Node.addEventListener("change", (ev) => {
             const checkbox = ev.target
@@ -667,4 +685,215 @@ export function showSessionsAsTables(parent, sessions, refetchLogic) {
 
             }
         ));
+}
+
+
+
+import { requestIAGlobalTraining, requestIAIndividualTraining, requestIAJobStatus, requestEstimatedMapData, createIAEstimatedMap } from "./requests.ia.js"
+import { setVisualizationCenter, visualizationCenter } from "../client.index.js"
+import { PinIcon } from "./icons/PinIcon.js";
+let trainingStatus = null;
+let resultIndividual = null;
+
+
+let jobStatusPollingId = null
+let jobId = null
+let jobStatus = null
+
+let iaMeasurementsLayerGroup = null;
+
+import { map } from "../client.index.js"
+import {
+    localToGeo
+}
+    from "./geo.utils.js"
+
+
+export function showIAButtons(parentElem, activeRoom, activeMeasurements, show = true) {
+
+    console.log("SHOULD SHOW IA BUTTONS ? ", show)
+
+    const sectionIAButtonsTemplateHTML = `
+        <div class="ia-section flex-row align-center wrap" >
+            <header class="flex-col">
+            <template data-toReplace="icon"></template>
+               <h3> Artificial Intelligence </h3>
+            </header>
+            <!-- The actions next --->
+                {{actions}}
+        <p class="basis-full">
+        *For improved accuracy it is recommended to first carry out a Global Training
+        </p>
+         </div>
+    `
+
+    const buttonTemplateHTML = `
+    <button 
+        class="hover-scaling button"
+        onClick={{handleClick}}>
+               {{label}}
+                </button>`
+
+
+
+    const { showPopupForT, showPopupWhile } = initPopup()
+
+
+    //Crear dataset de todas las salas
+    const nodeButtonRunTraining = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(buttonTemplateHTML, {
+        handleClick: async () => {
+
+
+            //First ask for global training
+            trainingStatus = await requestIAGlobalTraining()
+
+            console.log("training status",)
+            if (trainingStatus?.success) {
+                jobId = trainingStatus.job_id
+
+                showPopupForT(`${trainingStatus.message}`, "ok", 2, () => {
+                    //repeatedly ask for the job status
+                    jobStatusPollingId = setInterval(async () => {
+
+                        jobStatus = await requestIAJobStatus(trainingStatus.job_id)
+
+                        console.log(jobStatusPollingId)
+                        console.log("JOB STATUS", jobStatus)
+                    }, 5000)
+
+                })
+                    , 2000
+            }
+        }
+
+        ,
+        label: "1. Run Global Training"
+    })
+
+
+    //Botón de entrenar solo para una sala
+    const nodeButtonRunTrainingIndividual = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(buttonTemplateHTML, {
+        handleClick: async () => {
+
+            resultIndividual = await requestIAIndividualTraining(trainingStatus?.job_id, activeRoom.name)
+            showPopupForT(`${resultIndividual.message}`, "ok", 2)
+            const createIAEstimatedMapRequest = showPopupWhile("Generating estimated map", "load", async () => createIAEstimatedMap(activeRoom.name))
+        }
+        ,
+        label: `2. Run Room training for '${activeRoom.name}' `
+    })
+
+
+
+
+    if (show === false) {
+        if (iaMeasurementsLayerGroup)
+            map.removeLayer(iaMeasurementsLayerGroup)
+
+    }
+    //Slider de mostrar mediciones estimadas
+    const showIAMeasurementsToggleSwitch = SwitchComponent("Show AI estimations",
+        false, async (ev) => {
+            const isOn = ev.target.checked
+
+
+            if (!isOn && iaMeasurementsLayerGroup && map.hasLayer(iaMeasurementsLayerGroup)) {
+                map.removeLayer(iaMeasurementsLayerGroup)
+                showPopupForT("Disabling IA measurements", "load", 2)
+                return
+            }
+
+            if (!jobStatus?.data?.individualDataset_status) {
+                showPopupForT("The IA server is not ready for this operation", "error", 2)
+                ev.target.checked = false
+                return
+            }
+
+            const estimations = showPopupWhile("Loading estimations generated by AI", "load", async () => requestEstimatedMapData(jobId, activeRoom.name))
+
+
+            console.log(`IA estimations for this room `, estimations)
+
+            iaMeasurementsLayerGroup = L.layerGroup().addTo(map); // Layer to store measurements in a group
+
+
+
+
+            (await estimations).map((est) => {
+                //FIXME ? Adjust to fit bounding box maybe??
+                const localRoomCoordsAsLatLong = localToGeo(est.x, est.z, visualizationCenter.lat, visualizationCenter.lon)
+
+
+
+                const minDistance = getMinDistanceOfLatLonPointToSetOfPoints(est, activeMeasurements.map((p) => { return { x: p.position.x, z: p.position.z } }))
+
+
+                // console.log("MIN DISTANCE ", minDistance)
+                //Set threshold
+                if (minDistance <= 3.5) {
+                    let measurementPointInMap = L.circle(localRoomCoordsAsLatLong, {
+                        className: 'animated-marker',
+                        color: getPropertyColorForValue("dbm", est["dbm"]),
+                        fillOpacity: 0.05,
+                        radius: 0.05
+                    })
+                        .bindTooltip(`IA estimated point ${est["dbm"]} `)
+                        .addTo(iaMeasurementsLayerGroup).bringToBack();
+
+                }
+            })
+
+
+
+
+        },
+        //Custom styles
+        {
+            labelStyle: ["white"]
+        }
+
+
+    )
+
+
+    //These are all the action buttons
+    const allButtons = [nodeButtonRunTraining, nodeButtonRunTrainingIndividual, showIAMeasurementsToggleSwitch]
+
+
+
+    const actionsContainer = document.createElement("div");
+    actionsContainer.className = ["flex-row", "align-center", "wrap"].join(" ")
+    allButtons.forEach((btn) => { actionsContainer.appendChild(btn) })
+
+
+    const IASectionDiv = JSUtils.replaceTemplatePlaceholdersAndBindHandlers(sectionIAButtonsTemplateHTML, {
+        actions: actionsContainer
+    })
+
+
+
+
+    const iconPlaceholder = IASectionDiv.querySelector('[data-toReplace="icon"]')
+
+    console.log(AIICon({ fill: "#ffffff", size: "1em" }))
+    iconPlaceholder.replaceWith(
+        AIICon({ fill: "#ffffff", size: "4em" })
+    )
+
+
+    if (show === false) {
+        parentElem.replaceChildren();  // Just clear everything
+        return;
+    }
+
+
+    parentElem.replaceChildren(
+        IASectionDiv
+    )
+
+
+
+
+
+
 }

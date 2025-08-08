@@ -31,7 +31,7 @@ export function getAverageLatLng(coords) {
 
     coords.forEach(coord => {
         sumLat += validateLat(coord.lat);
-        sumLng += validateLong(coord.lon); 
+        sumLng += validateLong(coord.lon);
     });
 
     return { lat: sumLat / count, lon: sumLng / count }; // Returns the average lat/lng
@@ -39,19 +39,45 @@ export function getAverageLatLng(coords) {
 
 
 export function getDistanceInMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // Earth radius in meters
-  const toRad = (deg) => deg * Math.PI / 180;
+    const R = 6371000; // Earth radius in meters
+    const toRad = (deg) => deg * Math.PI / 180;
 
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) ** 2;
-    
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
+
+
+
+function getDistance(p1, p2) {
+    const dx = p2.x - p1.x;
+    const dz = p2.z - p1.z;
+    return Math.sqrt(dx * dx + dz * dz);
+}
+
+
+export function getMinDistanceOfLatLonPointToSetOfPoints(point, allOtherPoints) {
+    let minDistance = Infinity
+
+    //Get minimum distance
+    allOtherPoints.forEach((pPrime) => {
+        const distancePndPPrime = getDistance(point, pPrime)
+        if (distancePndPPrime <= minDistance)
+            minDistance = distancePndPPrime
+    })
+
+    return minDistance
+
+}
+
+
+
 
 
 export function isNumber(value) {
